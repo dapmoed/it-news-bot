@@ -38,7 +38,6 @@ func (w *Worker) Handle(name int) {
 
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
 			msg.ReplyToMessageID = update.Message.MessageID
-
 			message, err := w.Bot.Send(msg)
 			if err != nil {
 				// log
