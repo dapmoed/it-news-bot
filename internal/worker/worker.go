@@ -1,9 +1,12 @@
 package worker
 
 import (
+	"database/sql"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"it-news-bot/internal/db"
 	"sync"
+	"time"
 )
 
 type Worker struct {
@@ -11,14 +14,20 @@ type Worker struct {
 	Count   int
 	Chanel  tgbotapi.UpdatesChannel
 	Bot     *tgbotapi.BotAPI
+	config  Config
 }
 
-func New(botApi *tgbotapi.BotAPI, c tgbotapi.UpdatesChannel, count int) *Worker {
+type Config struct {
+	UsersRepo *db.Repository
+}
+
+func New(botApi *tgbotapi.BotAPI, chanel tgbotapi.UpdatesChannel, config Config, count int) *Worker {
 	return &Worker{
-		Chanel:  c,
+		Chanel:  chanel,
 		Count:   count,
 		Bot:     botApi,
 		wgGroup: &sync.WaitGroup{},
+		config:  config,
 	}
 }
 
@@ -34,15 +43,40 @@ func (w *Worker) Handle(name int) {
 	for {
 		select {
 		case update := <-w.Chanel:
-			fmt.Println("Name bot:", name)
-
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-			msg.ReplyToMessageID = update.Message.MessageID
-			message, err := w.Bot.Send(msg)
+			user, err := w.config.UsersRepo.GetUser(update.Message.From.ID)
 			if err != nil {
-				// log
+				if err == sql.ErrNoRows {
+					err := w.config.UsersRepo.AddUser(update.Message.From.ID, update.Message.From.UserName)
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+					msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Будем знакомы, %s", update.Message.From.UserName))
+					w.Bot.Send(msg)
+					continue
+				}
+				fmt.Println(err)
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Ошибка поиска пользователя")
+				w.Bot.Send(msg)
+				continue
 			}
-			_ = message
+
+			msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.UserName, time.Now().Sub(user.LastTime).String()))
+			w.Bot.Send(msg)
+
+			err = w.config.UsersRepo.UpdateUser(user)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+			//
+			//msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
+			//msg.ReplyToMessageID = update.Message.MessageID
+			//message, err := w.Bot.Send(msg)
+			//if err != nil {
+			//	// log
+			//}
+			//_ = message
 		}
 	}
 }

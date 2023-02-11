@@ -2,7 +2,9 @@ package main
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	_ "github.com/mattn/go-sqlite3"
 	"it-news-bot/internal/config"
+	"it-news-bot/internal/db"
 	"it-news-bot/internal/worker"
 	"log"
 )
@@ -20,6 +22,16 @@ func init() {
 }
 
 func main() {
+	usersRepo, err := db.New("bot_users.db")
+	if err != nil {
+		panic(err)
+	}
+	defer usersRepo.Close()
+	err = usersRepo.Init()
+	if err != nil {
+		panic(err)
+	}
+
 	bot, err := tgbotapi.NewBotAPI(conf.TelegramBotApi.BotToken)
 	if err != nil {
 		log.Panic(err)
@@ -34,7 +46,9 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	workers := worker.New(bot, updates, 10)
+	workers := worker.New(bot, updates, worker.Config{
+		UsersRepo: usersRepo,
+	}, 10)
 	workers.Init()
 	workers.Wait()
 
