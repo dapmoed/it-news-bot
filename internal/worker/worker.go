@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/mmcdole/gofeed"
 	"it-news-bot/internal/db"
 	"sync"
 	"time"
@@ -39,47 +40,88 @@ func (w *Worker) Init() {
 }
 
 func (w *Worker) Handle(name int) {
+
 	defer w.wgGroup.Done()
 	for {
 		select {
 		case update := <-w.Chanel:
-			user, err := w.config.UsersRepo.GetUser(update.Message.From.ID)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					err := w.config.UsersRepo.AddUser(update.Message.From.ID, update.Message.From.UserName)
-					if err != nil {
-						fmt.Println(err)
-						continue
-					}
-					msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Будем знакомы, %s", update.Message.From.UserName))
-					w.Bot.Send(msg)
-					continue
-				}
-				fmt.Println(err)
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Ошибка поиска пользователя")
-				w.Bot.Send(msg)
+
+			if update.Message == nil {
 				continue
 			}
 
-			msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.UserName, time.Now().Sub(user.LastTime).String()))
-			w.Bot.Send(msg)
-
-			err = w.config.UsersRepo.UpdateUser(user)
-			if err != nil {
-				fmt.Println(err)
+			if !update.Message.IsCommand() {
+				continue
 			}
 
-			//
-			//msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-			//msg.ReplyToMessageID = update.Message.MessageID
-			//message, err := w.Bot.Send(msg)
-			//if err != nil {
-			//	// log
-			//}
-			//_ = message
+			handlerCommand := NewHandleCommand(w.Bot, w.config.UsersRepo, update)
+			switch update.Message.Command() {
+			case "start":
+				handlerCommand.Start()
+			case "news":
+				handlerCommand.ListNews()
+			default:
+				handlerCommand.Unknown()
+			}
 		}
 	}
 }
 func (w *Worker) Wait() {
 	w.wgGroup.Wait()
+}
+
+type HandleCommand struct {
+	UsersRepo *db.Repository
+	update    tgbotapi.Update
+	bot       *tgbotapi.BotAPI
+}
+
+func NewHandleCommand(api *tgbotapi.BotAPI, repository *db.Repository, update tgbotapi.Update) *HandleCommand {
+	return &HandleCommand{
+		update:    update,
+		UsersRepo: repository,
+		bot:       api,
+	}
+}
+
+func (h *HandleCommand) Start() error {
+	user, err := h.UsersRepo.GetUser(h.update.Message.From.ID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			err := h.UsersRepo.AddUser(h.update.Message.From.ID, h.update.Message.From.UserName)
+			if err != nil {
+				return err
+			}
+			msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, fmt.Sprintf("Будем знакомы, %s", h.update.Message.From.UserName))
+			h.bot.Send(msg)
+			return nil
+		}
+		fmt.Println(err)
+		msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "Ошибка поиска пользователя")
+		h.bot.Send(msg)
+		return nil
+	}
+
+	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.UserName, time.Now().Sub(user.LastTime).String()))
+	h.bot.Send(msg)
+
+	err = h.UsersRepo.UpdateUser(user)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *HandleCommand) Unknown() {
+	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "Я не знаю такой команды")
+	h.bot.Send(msg)
+}
+
+func (h *HandleCommand) ListNews() {
+	fp := gofeed.NewParser()
+	feed, _ := fp.ParseURL("https://habr.com/ru/rss/all/all/?fl=ru")
+	for _, v := range feed.Items {
+		msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, v.Link)
+		h.bot.Send(msg)
+	}
 }

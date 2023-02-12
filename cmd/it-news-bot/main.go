@@ -52,9 +52,4 @@ func main() {
 	workers.Init()
 	workers.Wait()
 
-	//fp := gofeed.NewParser()
-	//feed, _ := fp.ParseURL("https://habr.com/ru/rss/all/all/?fl=ru")
-	//for _, v := range feed.Items {
-	//	fmt.Println(v.Categories)
-	//}
 }
