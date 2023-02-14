@@ -1,7 +1,7 @@
 FROM golang:1.18 as builder
 WORKDIR /app
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o app ./cmd/it-news-bot
 
 FROM alpine:latest
 WORKDIR /root/
