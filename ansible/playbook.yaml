@@ -1,0 +1,23 @@
+---
+-   name: Deploy application using docker
+    hosts: all
+    tasks:
+      - name: Create a directory if it does not exist
+        file:
+          path: "{{ docker.path_compose }}"
+          state: directory
+          mode: '0755'
+
+      - name: Template a file to /etc/file.conf
+        template:
+          src: templates/docker-compose.yml.j2
+          dest: "{{ docker.path_compose }}/docker-compose.yml"
+          mode: '0644'
+
+      - name: Run `docker-compose up` again
+        docker_compose:
+          project_src: "{{ docker.path_compose }}"
+          build: false
+          restarted: true
+          pull: true
+        register: output

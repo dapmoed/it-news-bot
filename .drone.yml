@@ -1,0 +1,62 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: tests
+    image: golang:1.18
+    commands:
+      - go mod tidy
+      - go test
+
+  - name: publish
+    image: plugins/docker
+    settings:
+      repo: dapmoed/${DRONE_REPO_NAME}
+      tags: ${DRONE_TAG}
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+
+  - name: Syntax Check
+    image: plugins/ansible:3
+    settings:
+      become: true
+      playbook: ansible/playbook.yaml
+      inventory: ansible/inventory/dev
+      private_key:
+        from_secret: ansible_private_key
+      ssh_extra_args: "-o StrictHostKeyChecking=no"
+      syntax_check: true
+
+  - name: Apply Playbook
+    image: plugins/ansible
+    environment:
+      TG_BOT_TOKEN:
+        from_secret: telegram_bot_token
+    settings:
+      become: true
+      playbook: ansible/playbook.yaml
+      inventory: ansible/inventory/dev
+      extra_vars: "telegram_bot_token=$TG_BOT_TOKEN"
+      private_key:
+        from_secret: ansible_private_key
+      ssh_extra_args: "-o StrictHostKeyChecking=no"
+      verbose: 0
+
+  - name: notify
+    image: appleboy/drone-telegram
+    settings:
+      token:
+        from_secret: telegram_token
+      to: -1001731607931
+    when:
+      status:
+        - success
+        - failure
+
+trigger:
+  branch:
+    - main
+    - dev
