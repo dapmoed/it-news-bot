@@ -22,7 +22,7 @@ func init() {
 }
 
 func main() {
-	usersRepo, err := db.New("bot_users.db")
+	usersRepo, err := db.New("data/bot_users.db")
 	if err != nil {
 		panic(err)
 	}

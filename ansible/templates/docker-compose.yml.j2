@@ -4,6 +4,8 @@ services:
     image: "{{ docker.image }}:{{ docker.tag }}"
     container_name: "{{ app_name }}"
     restart: always
+    volumes:
+      - /opt/it-news-bot/data:/root/data
     environment:
       - TELEGRAM_BOT_TOKEN={{ telegram_bot_token }}
     networks:
