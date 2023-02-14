@@ -20,7 +20,7 @@ func New(fileName string) (*Repository, error) {
 }
 
 func (r *Repository) Close() {
-	r.Close()
+	r.db.Close()
 }
 
 func (r *Repository) Init() error {

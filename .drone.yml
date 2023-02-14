@@ -39,7 +39,7 @@ steps:
       become: true
       playbook: ansible/playbook.yaml
       inventory: ansible/inventory/dev
-      extra_vars: "telegram_bot_token=$TG_BOT_TOKEN"
+      extra_vars: telegram_bot_token=$TG_BOT_TOKEN
       private_key:
         from_secret: ansible_private_key
       ssh_extra_args: "-o StrictHostKeyChecking=no"
