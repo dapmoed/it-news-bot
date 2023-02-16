@@ -32,14 +32,12 @@ steps:
 
   - name: Apply Playbook
     image: plugins/ansible
-    environment:
-      TG_BOT_TOKEN:
-        from_secret: telegram_bot_token
     settings:
       become: true
       playbook: ansible/playbook.yaml
       inventory: ansible/inventory/dev
-      extra_vars: telegram_bot_token=$TG_BOT_TOKEN
+      extra_vars:
+        from_secret: env
       private_key:
         from_secret: ansible_private_key
       ssh_extra_args: "-o StrictHostKeyChecking=no"

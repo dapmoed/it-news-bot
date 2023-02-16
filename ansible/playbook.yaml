@@ -8,10 +8,16 @@
           state: directory
           mode: '0755'
 
-      - name: Template a file to /etc/file.conf
+      - name: Template a file to docker-compose.yml
         template:
           src: templates/docker-compose.yml.j2
           dest: "{{ docker.path_compose }}/docker-compose.yml"
+          mode: '0644'
+
+      - name: Template a file to .env
+        template:
+          src: templates/.env.j2
+          dest: "{{ docker.path_compose }}/.env"
           mode: '0644'
 
       - name: Run `docker-compose up` again
