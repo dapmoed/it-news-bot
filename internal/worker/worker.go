@@ -129,6 +129,6 @@ func (h *HandleCommand) ListNews() {
 }
 
 func (h *HandleCommand) Test() {
-	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "Test")
+	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "TEST")
 	h.bot.Send(msg)
 }
