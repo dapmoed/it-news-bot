@@ -60,6 +60,8 @@ func (w *Worker) Handle(name int) {
 				handlerCommand.Start()
 			case "news":
 				handlerCommand.ListNews()
+			case "test":
+				handlerCommand.Test()
 			default:
 				handlerCommand.Unknown()
 			}
@@ -124,4 +126,9 @@ func (h *HandleCommand) ListNews() {
 		msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, v.Link)
 		h.bot.Send(msg)
 	}
+}
+
+func (h *HandleCommand) Test() {
+	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "Test")
+	h.bot.Send(msg)
 }
