@@ -61,3 +61,4 @@ trigger:
     - dev
   event:
     - tag
+    - push
