@@ -8,6 +8,7 @@ steps:
     commands:
       - go mod tidy
       - go test ./...
+      - env
 
   - name: publish
     image: plugins/docker
