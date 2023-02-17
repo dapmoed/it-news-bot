@@ -8,10 +8,11 @@ steps:
     commands:
       - go mod tidy
       - go test ./...
-      - env
 
   - name: publish
     image: plugins/docker
+    commands:
+      - env
     settings:
       repo: dapmoed/${DRONE_REPO_NAME}
       tags: ${DRONE_TAG}
@@ -19,6 +20,9 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
+    when:
+      event:
+        - tag
 
   - name: Syntax Check
     image: plugins/ansible:3
@@ -59,6 +63,3 @@ trigger:
   branch:
     - main
     - dev
-  event:
-    - tag
-    - push
