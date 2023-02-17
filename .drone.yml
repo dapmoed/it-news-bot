@@ -58,8 +58,3 @@ steps:
       status:
         - success
         - failure
-
-trigger:
-  branch:
-    - main
-    - dev
