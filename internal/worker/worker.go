@@ -45,7 +45,6 @@ func (w *Worker) Handle(name int) {
 	for {
 		select {
 		case update := <-w.Chanel:
-
 			if update.Message == nil {
 				continue
 			}
@@ -90,11 +89,15 @@ func (h *HandleCommand) Start() error {
 	user, err := h.UsersRepo.GetUser(h.update.Message.From.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			err := h.UsersRepo.AddUser(h.update.Message.From.ID, h.update.Message.From.UserName)
+			username := fmt.Sprintf("%s.%s", h.update.Message.From.FirstName, h.update.Message.From.LastName)
+			if h.update.Message.From.UserName != "" {
+				username = fmt.Sprintf("%s( @%s )", username, h.update.Message.From.UserName)
+			}
+			err := h.UsersRepo.AddUser(h.update.Message.From.ID, username)
 			if err != nil {
 				return err
 			}
-			msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, fmt.Sprintf("Будем знакомы, %s", h.update.Message.From.UserName))
+			msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, fmt.Sprintf("Будем знакомы, %s", username))
 			h.bot.Send(msg)
 			return nil
 		}

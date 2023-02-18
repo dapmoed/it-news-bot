@@ -39,7 +39,7 @@ type User struct {
 
 func (r *Repository) GetUser(id int64) (User, error) {
 	user := User{}
-	rows := r.db.QueryRow("select * from users")
+	rows := r.db.QueryRow("select * from users where id = $1", id)
 	iTime := int64(0)
 	err := rows.Scan(&user.id, &user.UserName, &iTime)
 	if err != nil {
