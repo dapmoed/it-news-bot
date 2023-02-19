@@ -5,6 +5,7 @@ import (
 	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mmcdole/gofeed"
+	"it-news-bot/internal/chains"
 	"it-news-bot/internal/db"
 	"sync"
 	"time"
@@ -19,7 +20,8 @@ type Worker struct {
 }
 
 type Config struct {
-	UsersRepo *db.Repository
+	UsersRepo db.UsersRepoI
+	Chains    *chains.Chain
 }
 
 func New(botApi *tgbotapi.BotAPI, chanel tgbotapi.UpdatesChannel, config Config, count int) *Worker {
@@ -49,21 +51,23 @@ func (w *Worker) Handle(name int) {
 				continue
 			}
 
-			if !update.Message.IsCommand() {
-				continue
-			}
+			w.config.Chains.Call(update)
 
-			handlerCommand := NewHandleCommand(w.Bot, w.config.UsersRepo, update)
-			switch update.Message.Command() {
-			case "start":
-				handlerCommand.Start()
-			case "news":
-				handlerCommand.ListNews()
-			case "test":
-				handlerCommand.Test()
-			default:
-				handlerCommand.Unknown()
-			}
+			//if !update.Message.IsCommand() {
+			//	continue
+			//}
+			//
+			//handlerCommand := NewHandleCommand(w.Bot, w.config.UsersRepo, update)
+			//switch update.Message.Command() {
+			//case "start":
+			//	handlerCommand.Start()
+			//case "news":
+			//	handlerCommand.ListNews()
+			//case "test":
+			//	handlerCommand.Test()
+			//default:
+			//	handlerCommand.Unknown()
+			//}
 		}
 	}
 }
@@ -72,12 +76,12 @@ func (w *Worker) Wait() {
 }
 
 type HandleCommand struct {
-	UsersRepo *db.Repository
+	UsersRepo db.UsersRepoI
 	update    tgbotapi.Update
 	bot       *tgbotapi.BotAPI
 }
 
-func NewHandleCommand(api *tgbotapi.BotAPI, repository *db.Repository, update tgbotapi.Update) *HandleCommand {
+func NewHandleCommand(api *tgbotapi.BotAPI, repository db.UsersRepoI, update tgbotapi.Update) *HandleCommand {
 	return &HandleCommand{
 		update:    update,
 		UsersRepo: repository,

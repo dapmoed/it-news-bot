@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/mattn/go-sqlite3"
+	"it-news-bot/internal/chains"
 	"it-news-bot/internal/config"
 	"it-news-bot/internal/db"
 	"it-news-bot/internal/worker"
@@ -33,13 +33,10 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(conf)
-
 	bot, err := tgbotapi.NewBotAPI(conf.TelegramBotApi.BotToken)
 	if err != nil {
 		log.Panic(err)
 	}
-
 	bot.Debug = false
 
 	log.Printf("Authorized on account %s", bot.Self.UserName)
@@ -49,8 +46,16 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
+	chainCommand := chains.NewCommand(bot)
+	chainStart := chains.NewChain("chain").
+		Register(chainCommand.Start).
+		Register(chainCommand.Start2).
+		Register(chainCommand.Start3).
+		Register(chainCommand.Start4)
+
 	workers := worker.New(bot, updates, worker.Config{
 		UsersRepo: usersRepo,
+		Chains:    chainStart,
 	}, 10)
 	workers.Init()
 	workers.Wait()
