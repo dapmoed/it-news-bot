@@ -4,8 +4,10 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/mattn/go-sqlite3"
 	"it-news-bot/internal/chains"
+	"it-news-bot/internal/command"
 	"it-news-bot/internal/config"
 	"it-news-bot/internal/db"
+	"it-news-bot/internal/sessions"
 	"it-news-bot/internal/worker"
 	"log"
 )
@@ -46,16 +48,21 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
-	chainCommand := chains.NewCommand(bot)
-	chainStart := chains.NewChain("chain").
-		Register(chainCommand.Start).
-		Register(chainCommand.Start2).
-		Register(chainCommand.Start3).
-		Register(chainCommand.Start4)
+	chainsPool := chains.NewPool()
+	startCommand := command.NewStart(bot, usersRepo)
+	chainsPool.Command("start",
+		chains.NewChain().
+			Register(startCommand.Start),
+	)
+	newsCommand := command.NewNews(bot, usersRepo)
+	chainsPool.Command("news",
+		chains.NewChain().
+			Register(newsCommand.Start))
 
 	workers := worker.New(bot, updates, worker.Config{
-		UsersRepo: usersRepo,
-		Chains:    chainStart,
+		UsersRepo:      usersRepo,
+		ChainsPool:     chainsPool,
+		StorageSession: sessions.New(),
 	}, 10)
 	workers.Init()
 	workers.Wait()

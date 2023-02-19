@@ -1,14 +1,11 @@
 package worker
 
 import (
-	"database/sql"
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/mmcdole/gofeed"
 	"it-news-bot/internal/chains"
 	"it-news-bot/internal/db"
+	"it-news-bot/internal/sessions"
 	"sync"
-	"time"
 )
 
 type Worker struct {
@@ -20,8 +17,9 @@ type Worker struct {
 }
 
 type Config struct {
-	UsersRepo db.UsersRepoI
-	Chains    *chains.Chain
+	UsersRepo      db.UsersRepoI
+	ChainsPool     *chains.Pool
+	StorageSession *sessions.StorageSession
 }
 
 func New(botApi *tgbotapi.BotAPI, chanel tgbotapi.UpdatesChannel, config Config, count int) *Worker {
@@ -42,7 +40,6 @@ func (w *Worker) Init() {
 }
 
 func (w *Worker) Handle(name int) {
-
 	defer w.wgGroup.Done()
 	for {
 		select {
@@ -50,24 +47,32 @@ func (w *Worker) Handle(name int) {
 			if update.Message == nil {
 				continue
 			}
+			userId := update.Message.From.ID
 
-			w.config.Chains.Call(update)
+			if update.Message.IsCommand() {
+				chain, err := w.config.ChainsPool.GetChain(update.Message.Command())
+				if err != nil {
+					if err == chains.ErrNotFound {
+						Unknown(w.Bot, update)
+						continue
+					}
+					// TODO log errors
+					continue
+				}
+				w.config.StorageSession.Add(userId, chain)
+			}
 
-			//if !update.Message.IsCommand() {
-			//	continue
-			//}
-			//
-			//handlerCommand := NewHandleCommand(w.Bot, w.config.UsersRepo, update)
-			//switch update.Message.Command() {
-			//case "start":
-			//	handlerCommand.Start()
-			//case "news":
-			//	handlerCommand.ListNews()
-			//case "test":
-			//	handlerCommand.Test()
-			//default:
-			//	handlerCommand.Unknown()
-			//}
+			userSession, err := w.config.StorageSession.Get(userId)
+			if err != nil {
+				if err == sessions.ErrNotFound {
+					// TODO log error
+					continue
+				}
+				// TODO log error
+				continue
+			}
+
+			userSession.GetChain().Call(update)
 		}
 	}
 }
@@ -75,67 +80,7 @@ func (w *Worker) Wait() {
 	w.wgGroup.Wait()
 }
 
-type HandleCommand struct {
-	UsersRepo db.UsersRepoI
-	update    tgbotapi.Update
-	bot       *tgbotapi.BotAPI
-}
-
-func NewHandleCommand(api *tgbotapi.BotAPI, repository db.UsersRepoI, update tgbotapi.Update) *HandleCommand {
-	return &HandleCommand{
-		update:    update,
-		UsersRepo: repository,
-		bot:       api,
-	}
-}
-
-func (h *HandleCommand) Start() error {
-	user, err := h.UsersRepo.GetUser(h.update.Message.From.ID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			username := fmt.Sprintf("%s.%s", h.update.Message.From.FirstName, h.update.Message.From.LastName)
-			if h.update.Message.From.UserName != "" {
-				username = fmt.Sprintf("%s( @%s )", username, h.update.Message.From.UserName)
-			}
-			err := h.UsersRepo.AddUser(h.update.Message.From.ID, username)
-			if err != nil {
-				return err
-			}
-			msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, fmt.Sprintf("Будем знакомы, %s", username))
-			h.bot.Send(msg)
-			return nil
-		}
-		fmt.Println(err)
-		msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "Ошибка поиска пользователя")
-		h.bot.Send(msg)
-		return nil
-	}
-
-	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.UserName, time.Now().Sub(user.LastTime).String()))
-	h.bot.Send(msg)
-
-	err = h.UsersRepo.UpdateUser(user)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (h *HandleCommand) Unknown() {
-	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "Я не знаю такой команды")
-	h.bot.Send(msg)
-}
-
-func (h *HandleCommand) ListNews() {
-	fp := gofeed.NewParser()
-	feed, _ := fp.ParseURL("https://habr.com/ru/rss/all/all/?fl=ru")
-	for _, v := range feed.Items {
-		msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, v.Link)
-		h.bot.Send(msg)
-	}
-}
-
-func (h *HandleCommand) Test() {
-	msg := tgbotapi.NewMessage(h.update.Message.Chat.ID, "TEST")
-	h.bot.Send(msg)
+func Unknown(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Я не знаю такой команды")
+	bot.Send(msg)
 }

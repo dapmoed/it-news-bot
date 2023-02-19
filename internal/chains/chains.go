@@ -5,25 +5,28 @@ import (
 )
 
 type Chain struct {
-	command string
 	steps   []Step
 	current int
 }
 
-func NewChain(command string) *Chain {
+func NewChain() Chain {
+	return Chain{}
+}
+
+func (c Chain) Clone() *Chain {
 	return &Chain{
-		command: command,
+		steps: c.steps,
 	}
 }
 
 func (c *Chain) Call(update tgbotapi.Update) {
 	c.steps[c.current].Call(Context{
-		chain:  c,
-		update: update,
+		Chain:  c,
+		Update: update,
 	})
 }
 
-func (c *Chain) Register(f func(ctx Context)) *Chain {
+func (c Chain) Register(f func(ctx Context)) Chain {
 	c.steps = append(c.steps, Step{
 		f: f,
 	})
@@ -42,38 +45,7 @@ func (s Step) Call(ctx Context) {
 	s.f(ctx)
 }
 
-type Command struct {
-	bot *tgbotapi.BotAPI
-}
-
-func NewCommand(bot *tgbotapi.BotAPI) *Command {
-	return &Command{
-		bot: bot,
-	}
-}
-
-func (c *Command) Start(ctx Context) {
-	msg := tgbotapi.NewMessage(ctx.update.Message.Chat.ID, "StartOne")
-	c.bot.Send(msg)
-	ctx.chain.Next()
-}
-
-func (c *Command) Start2(ctx Context) {
-	msg := tgbotapi.NewMessage(ctx.update.Message.Chat.ID, "StartTwo")
-	c.bot.Send(msg)
-	ctx.chain.Next()
-}
-func (c *Command) Start3(ctx Context) {
-	msg := tgbotapi.NewMessage(ctx.update.Message.Chat.ID, "StartThree")
-	c.bot.Send(msg)
-	ctx.chain.Next()
-}
-func (c *Command) Start4(ctx Context) {
-	msg := tgbotapi.NewMessage(ctx.update.Message.Chat.ID, "StartFour")
-	c.bot.Send(msg)
-}
-
 type Context struct {
-	update tgbotapi.Update
-	chain  *Chain
+	Update tgbotapi.Update
+	Chain  *Chain
 }
