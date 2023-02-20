@@ -59,6 +59,11 @@ func main() {
 		chains.NewChain().
 			Register(newsCommand.Start))
 
+	testCommand := command.NewTest(bot, usersRepo)
+	chainsPool.Command("test",
+		chains.NewChain().
+			Register(testCommand.Start).Register(testCommand.End))
+
 	workers := worker.New(bot, updates, worker.Config{
 		UsersRepo:      usersRepo,
 		ChainsPool:     chainsPool,

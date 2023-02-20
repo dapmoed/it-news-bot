@@ -1,12 +1,19 @@
 package chains
 
 import (
+	"errors"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+)
+
+var (
+	ErrEndOfScript = errors.New("end of script")
 )
 
 type Chain struct {
 	steps   []Step
 	current int
+	context *Context
+	ended   bool
 }
 
 func NewChain() Chain {
@@ -14,38 +21,48 @@ func NewChain() Chain {
 }
 
 func (c Chain) Clone() *Chain {
-	return &Chain{
+	chain := &Chain{
 		steps: c.steps,
 	}
+	chain.context = &Context{
+		Chain: chain,
+	}
+	return chain
 }
 
 func (c *Chain) Call(update tgbotapi.Update) {
-	c.steps[c.current].Call(Context{
-		Chain:  c,
-		Update: update,
-	})
+	ctx := c.context
+	ctx.Update = update
+	c.steps[c.current].Call(ctx)
 }
 
-func (c Chain) Register(f func(ctx Context)) Chain {
+func (c Chain) Register(f func(ctx *Context)) Chain {
 	c.steps = append(c.steps, Step{
 		f: f,
 	})
 	return c
 }
 
-func (c *Chain) Next() {
+func (c *Chain) Next() error {
+	if len(c.steps) == c.current+1 {
+		return ErrEndOfScript
+	}
 	c.current++
+	return nil
+}
+
+func (c *Chain) End() {
+	c.ended = true
+}
+
+func (c *Chain) IsEnded() bool {
+	return c.ended
 }
 
 type Step struct {
-	f func(ctx Context)
+	f func(ctx *Context)
 }
 
-func (s Step) Call(ctx Context) {
+func (s Step) Call(ctx *Context) {
 	s.f(ctx)
-}
-
-type Context struct {
-	Update tgbotapi.Update
-	Chain  *Chain
 }

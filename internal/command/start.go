@@ -21,7 +21,7 @@ func NewStart(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *Start {
 	}
 }
 
-func (c *Start) Start(ctx chains.Context) {
+func (c *Start) Start(ctx *chains.Context) {
 	user, err := c.usersRepo.GetUser(ctx.Update.Message.From.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -53,5 +53,5 @@ func (c *Start) Start(ctx chains.Context) {
 		return
 	}
 	return
-	ctx.Chain.Next()
+	//ctx.Chain.Next()
 }

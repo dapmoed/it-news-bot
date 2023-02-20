@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	defaultExpiredDuration = 1 * time.Minute
+	defaultExpiredDuration = 10 * time.Second
 )
 
 var (
@@ -15,7 +15,7 @@ var (
 )
 
 type StorageSession struct {
-	sessions map[int64]Session
+	sessions map[int64]*Session
 }
 
 type Session struct {
@@ -29,24 +29,30 @@ func (s *Session) GetChain() *chains.Chain {
 }
 
 func New() *StorageSession {
-	return &StorageSession{
-		sessions: make(map[int64]Session),
+	strgSess := &StorageSession{
+		sessions: make(map[int64]*Session),
 	}
+	go strgSess.RunCollector()
+	return strgSess
 }
 
-func (s *StorageSession) Get(userId int64) (Session, error) {
+func (s *StorageSession) Get(userId int64) (*Session, error) {
 	s.Clear()
 	if val, ok := s.sessions[userId]; ok {
 		if time.Now().Before(s.sessions[userId].expired) {
 			return val, nil
 		}
-		return Session{}, ErrNotFound
+		return nil, ErrNotFound
 	}
-	return Session{}, ErrNotFound
+	return nil, ErrNotFound
+}
+
+func (s *Session) Extend() {
+	s.expired = time.Now().Add(defaultExpiredDuration)
 }
 
 func (s *StorageSession) Add(userId int64, chain *chains.Chain) {
-	s.sessions[userId] = Session{
+	s.sessions[userId] = &Session{
 		userId:  userId,
 		chain:   chain,
 		expired: time.Now().Add(defaultExpiredDuration),
@@ -57,6 +63,21 @@ func (s *StorageSession) Clear() {
 	for i, v := range s.sessions {
 		if v.expired.Before(time.Now()) {
 			delete(s.sessions, i)
+			continue
+		}
+		if v.chain.IsEnded() {
+			delete(s.sessions, i)
+			continue
+		}
+	}
+}
+
+func (s *StorageSession) RunCollector() {
+	ticker := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			s.Clear()
 		}
 	}
 }

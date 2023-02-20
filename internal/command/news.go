@@ -19,7 +19,7 @@ func NewNews(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *News {
 	}
 }
 
-func (n *News) Start(ctx chains.Context) {
+func (n *News) Start(ctx *chains.Context) {
 	fp := gofeed.NewParser()
 	feed, _ := fp.ParseURL("https://habr.com/ru/rss/all/all/?fl=ru")
 	for _, v := range feed.Items {

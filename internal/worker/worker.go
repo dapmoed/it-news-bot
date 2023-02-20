@@ -71,7 +71,7 @@ func (w *Worker) Handle(name int) {
 				// TODO log error
 				continue
 			}
-
+			userSession.Extend()
 			userSession.GetChain().Call(update)
 		}
 	}
