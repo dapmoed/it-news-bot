@@ -7,16 +7,16 @@ var (
 )
 
 type Pool struct {
-	chains map[string]Chain
+	chains map[string]*Chain
 }
 
 func NewPool() *Pool {
 	return &Pool{
-		chains: make(map[string]Chain),
+		chains: make(map[string]*Chain),
 	}
 }
 
-func (p *Pool) Command(c string, chain Chain) *Pool {
+func (p *Pool) Command(c string, chain *Chain) *Pool {
 	p.chains[c] = chain
 	return p
 }

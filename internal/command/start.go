@@ -47,7 +47,7 @@ func (c *Start) Start(ctx *chains.Context) {
 	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.UserName, time.Now().Sub(user.LastTime).String()))
 	c.bot.Send(msg)
 
-	err = c.usersRepo.UpdateUser(user)
+	err = c.usersRepo.UpdateLastTime(user)
 	if err != nil {
 		// TODO logs
 		return

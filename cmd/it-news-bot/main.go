@@ -6,10 +6,11 @@ import (
 	"it-news-bot/internal/chains"
 	"it-news-bot/internal/command"
 	"it-news-bot/internal/config"
-	"it-news-bot/internal/db"
+	"it-news-bot/internal/db/gorm_db"
 	"it-news-bot/internal/sessions"
 	"it-news-bot/internal/worker"
 	"log"
+	"time"
 )
 
 var (
@@ -25,7 +26,7 @@ func init() {
 }
 
 func main() {
-	usersRepo, err := db.New("./data/bot_users.db")
+	usersRepo, err := gorm_db.New("./data/bot_users.db")
 	if err != nil {
 		panic(err)
 	}
@@ -52,7 +53,7 @@ func main() {
 	startCommand := command.NewStart(bot, usersRepo)
 	chainsPool.Command("start",
 		chains.NewChain().
-			Register(startCommand.Start),
+			Register(startCommand.Start).SetDurationSession(time.Second),
 	)
 	newsCommand := command.NewNews(bot, usersRepo)
 	chainsPool.Command("news",

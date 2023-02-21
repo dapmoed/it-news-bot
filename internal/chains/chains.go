@@ -3,6 +3,7 @@ package chains
 import (
 	"errors"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"time"
 )
 
 var (
@@ -10,24 +11,37 @@ var (
 )
 
 type Chain struct {
-	steps   []Step
-	current int
-	context *Context
-	ended   bool
+	steps           []Step
+	current         int
+	context         *Context
+	ended           bool
+	durationSession time.Duration
 }
 
-func NewChain() Chain {
-	return Chain{}
+func NewChain() *Chain {
+	return &Chain{
+		durationSession: time.Second * 10,
+	}
 }
 
-func (c Chain) Clone() *Chain {
+func (c *Chain) Clone() *Chain {
 	chain := &Chain{
-		steps: c.steps,
+		steps:           c.steps,
+		durationSession: c.DurationSession(),
 	}
 	chain.context = &Context{
 		Chain: chain,
 	}
 	return chain
+}
+
+func (c *Chain) DurationSession() time.Duration {
+	return c.durationSession
+}
+
+func (c *Chain) SetDurationSession(duration time.Duration) *Chain {
+	c.durationSession = duration
+	return c
 }
 
 func (c *Chain) Call(update tgbotapi.Update) {
@@ -36,7 +50,7 @@ func (c *Chain) Call(update tgbotapi.Update) {
 	c.steps[c.current].Call(ctx)
 }
 
-func (c Chain) Register(f func(ctx *Context)) Chain {
+func (c *Chain) Register(f func(ctx *Context)) *Chain {
 	c.steps = append(c.steps, Step{
 		f: f,
 	})

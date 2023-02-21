@@ -48,14 +48,22 @@ func (s *StorageSession) Get(userId int64) (*Session, error) {
 }
 
 func (s *Session) Extend() {
+	if s.chain != nil {
+		s.expired = time.Now().Add(s.chain.DurationSession())
+		return
+	}
 	s.expired = time.Now().Add(defaultExpiredDuration)
 }
 
 func (s *StorageSession) Add(userId int64, chain *chains.Chain) {
+	expired := defaultExpiredDuration
+	if chain != nil {
+		expired = chain.DurationSession()
+	}
 	s.sessions[userId] = &Session{
 		userId:  userId,
 		chain:   chain,
-		expired: time.Now().Add(defaultExpiredDuration),
+		expired: time.Now().Add(expired),
 	}
 }
 
