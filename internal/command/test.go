@@ -7,19 +7,19 @@ import (
 	"it-news-bot/internal/db"
 )
 
-type Test struct {
+type TestCommand struct {
 	bot       *tgbotapi.BotAPI
 	usersRepo db.UsersRepoI
 }
 
-func NewTest(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *Test {
-	return &Test{
+func NewCommandTest(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *TestCommand {
+	return &TestCommand{
 		bot:       bot,
 		usersRepo: usersRepo,
 	}
 }
 
-func (t *Test) Start(ctx *chains.Context) {
+func (t *TestCommand) Start(ctx *chains.Context) {
 	defer ctx.Chain.Next()
 
 	_, strg := ctx.Get("strg")
@@ -41,7 +41,7 @@ func (t *Test) Start(ctx *chains.Context) {
 
 }
 
-func (t *Test) End(ctx *chains.Context) {
+func (t *TestCommand) End(ctx *chains.Context) {
 	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, "End of script")
 	t.bot.Send(msg)
 	ctx.Chain.End()

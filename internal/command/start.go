@@ -9,19 +9,19 @@ import (
 	"time"
 )
 
-type Start struct {
+type StartCommand struct {
 	bot       *tgbotapi.BotAPI
 	usersRepo db.UsersRepoI
 }
 
-func NewStart(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *Start {
-	return &Start{
+func NewCommandStart(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *StartCommand {
+	return &StartCommand{
 		bot:       bot,
 		usersRepo: usersRepo,
 	}
 }
 
-func (c *Start) Start(ctx *chains.Context) {
+func (c *StartCommand) Start(ctx *chains.Context) {
 	user, err := c.usersRepo.GetUser(ctx.Update.Message.From.ID)
 	if err != nil {
 		if err == sql.ErrNoRows {

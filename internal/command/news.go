@@ -7,19 +7,19 @@ import (
 	"it-news-bot/internal/db"
 )
 
-type News struct {
+type NewsCommand struct {
 	bot       *tgbotapi.BotAPI
 	usersRepo db.UsersRepoI
 }
 
-func NewNews(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *News {
-	return &News{
+func NewCommandNews(bot *tgbotapi.BotAPI, usersRepo db.UsersRepoI) *NewsCommand {
+	return &NewsCommand{
 		bot:       bot,
 		usersRepo: usersRepo,
 	}
 }
 
-func (n *News) Start(ctx *chains.Context) {
+func (n *NewsCommand) Start(ctx *chains.Context) {
 	fp := gofeed.NewParser()
 	feed, _ := fp.ParseURL("https://habr.com/ru/rss/all/all/?fl=ru")
 	for _, v := range feed.Items {

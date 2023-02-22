@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/mattn/go-sqlite3"
+	"go.uber.org/zap"
 	"it-news-bot/internal/chains"
 	"it-news-bot/internal/command"
 	"it-news-bot/internal/config"
-	"it-news-bot/internal/db/gorm_db"
+	"it-news-bot/internal/db"
 	"it-news-bot/internal/sessions"
 	"it-news-bot/internal/worker"
 	"log"
@@ -26,12 +28,30 @@ func init() {
 }
 
 func main() {
-	usersRepo, err := gorm_db.New("./data/bot_users.db")
+	fmt.Println(conf)
+
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+
+	sqlLiteDB, err := db.NewDB(conf.DB.PathDB)
 	if err != nil {
 		panic(err)
 	}
-	defer usersRepo.Close()
-	err = usersRepo.Init()
+
+	defer func() {
+		if db, err := sqlLiteDB.DB(); err == nil {
+			err := db.Close()
+			if err != nil {
+				// TODO LOG
+			}
+		}
+	}()
+
+	usersRepo, err := db.NewUserRepo(sqlLiteDB)
+	if err != nil {
+		panic(err)
+	}
+	rssRepo, err := db.NewRssRepo(sqlLiteDB)
 	if err != nil {
 		panic(err)
 	}
@@ -50,20 +70,25 @@ func main() {
 	updates := bot.GetUpdatesChan(u)
 
 	chainsPool := chains.NewPool()
-	startCommand := command.NewStart(bot, usersRepo)
+	startCommand := command.NewCommandStart(bot, usersRepo)
 	chainsPool.Command("start",
 		chains.NewChain().
 			Register(startCommand.Start).SetDurationSession(time.Second),
 	)
-	newsCommand := command.NewNews(bot, usersRepo)
+	newsCommand := command.NewCommandNews(bot, usersRepo)
 	chainsPool.Command("news",
 		chains.NewChain().
 			Register(newsCommand.Start))
 
-	testCommand := command.NewTest(bot, usersRepo)
+	testCommand := command.NewCommandTest(bot, usersRepo)
 	chainsPool.Command("test",
 		chains.NewChain().
 			Register(testCommand.Start).Register(testCommand.End))
+
+	rssCommand := command.NewCommandRss(bot, rssRepo, logger)
+	chainsPool.Command("rss",
+		chains.NewChain().
+			Register(rssCommand.List).Register(rssCommand.Add))
 
 	workers := worker.New(bot, updates, worker.Config{
 		UsersRepo:      usersRepo,

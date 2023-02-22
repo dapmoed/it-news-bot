@@ -45,6 +45,16 @@ func (w *Worker) Handle(name int) {
 		select {
 		case update := <-w.Chanel:
 			if update.Message == nil {
+				callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+				if _, err := w.Bot.Request(callback); err != nil {
+					panic(err)
+				}
+
+				// And finally, send a message containing the data received.
+				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
+				if _, err := w.Bot.Send(msg); err != nil {
+					panic(err)
+				}
 				continue
 			}
 			userId := update.Message.From.ID
