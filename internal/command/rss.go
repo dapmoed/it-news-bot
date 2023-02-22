@@ -41,7 +41,7 @@ func (r *RssCommand) List(ctx *chains.Context) {
 
 	fmt.Println(os.Getwd())
 
-	tmpl, err := template.ParseFiles("internal/template/list_rss.tmpl")
+	tmpl, err := template.ParseFiles("data/list_rss.tmpl")
 	if err != nil {
 		r.logger.Error("error parse template", zap.Error(err))
 		r.bot.Send(errorMessage)
