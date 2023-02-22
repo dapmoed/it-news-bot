@@ -13,7 +13,7 @@ FROM alpine:latest
 WORKDIR /root/
 RUN mkdir data
 COPY --from=builder ./app/app .
-COPY --from=builder ./app/internal/template ./data/template/.
+COPY --from=builder ./app/internal/template/. ./data/template/.
 EXPOSE 8080
 
 CMD ["./app"]
