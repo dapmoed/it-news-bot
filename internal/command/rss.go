@@ -108,5 +108,7 @@ func (r *RssCommand) AddRssUriStepTwo(ctx *chains.Context) {
 		return
 	}
 
+	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, "URL успешно добавлен")
+	r.bot.Send(msg)
 	ctx.Chain.End()
 }
