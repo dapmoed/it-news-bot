@@ -10,6 +10,7 @@ type UsersRepoI interface {
 	AddUser(id int64, userName string) error
 	UpdateUser(user *User) error
 	UpdateLastTime(user *User) error
+	List() ([]User, error)
 }
 
 type User struct {

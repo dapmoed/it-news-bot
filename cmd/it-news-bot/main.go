@@ -9,6 +9,7 @@ import (
 	"it-news-bot/internal/command"
 	"it-news-bot/internal/config"
 	"it-news-bot/internal/db"
+	"it-news-bot/internal/notify"
 	"it-news-bot/internal/sessions"
 	"it-news-bot/internal/template"
 	"it-news-bot/internal/worker"
@@ -65,7 +66,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_ = subscriptionRepo
+	notifyRepo, err := db.NewNotifyRepo(sqlLiteDB)
+	if err != nil {
+		panic(err)
+	}
+	_ = notifyRepo
 
 	bot, err := tgbotapi.NewBotAPI(conf.TelegramBotApi.BotToken)
 	if err != nil {
@@ -118,6 +123,15 @@ func main() {
 		Logger:         logger,
 	}, 10)
 	workers.Init()
-	workers.Wait()
 
+	notifier := notify.New(notify.Param{
+		SubscriptionRepo: subscriptionRepo,
+		Logger:           logger,
+		Bot:              bot,
+		UserRepo:         usersRepo,
+	})
+
+	go notifier.Run()
+
+	workers.Wait()
 }

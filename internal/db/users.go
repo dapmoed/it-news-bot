@@ -54,3 +54,12 @@ func (r *UsersRepository) UpdateLastTime(user *User) error {
 	r.db.Save(&user)
 	return nil
 }
+
+func (r *UsersRepository) List() ([]User, error) {
+	users := make([]User, 0)
+	tx := r.db.Find(&users)
+	if tx.Error != nil {
+		return users, tx.Error
+	}
+	return users, nil
+}
