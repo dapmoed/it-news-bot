@@ -15,6 +15,10 @@ const (
 	defaultTextError = "Извините у нас проблемы"
 )
 
+type SubscribeCallbackData struct {
+	RssId int64 `json:"rssId"`
+}
+
 type RssCommand struct {
 	bot       *tgbotapi.BotAPI
 	rssRepo   db.RssRepoI
@@ -34,33 +38,34 @@ func NewCommandRss(bot *tgbotapi.BotAPI, rssRepo db.RssRepoI, templates *templat
 func (r *RssCommand) List(ctx *chains.Context) {
 	errorMessage := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, defaultTextError)
 
-	rss, err := r.rssRepo.List()
+	rssList, err := r.rssRepo.List()
 	if err != nil {
 		r.logger.Error("error list rss", zap.Error(err))
 		r.bot.Send(errorMessage)
 		return
 	}
 
-	var textMessage bytes.Buffer
-
-	err = r.templates.Execute("list_rss", &textMessage, rss)
-	if err != nil {
-		r.logger.Error("error execute template", zap.Error(err))
-		r.bot.Send(errorMessage)
-		return
-	}
-
-	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, textMessage.String())
-
-	//var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
-	//	tgbotapi.NewInlineKeyboardRow(
-	//		tgbotapi.NewInlineKeyboardButtonData("Add", "Add"),
-	//	),
-	//)
-	//msg.ReplyMarkup = numericKeyboard
-	_, err = r.bot.Send(msg)
-	if err != nil {
-		r.logger.Error("error send message", zap.Error(err))
+	for _, rss := range rssList {
+		var textMessage bytes.Buffer
+		err = r.templates.Execute("rss", &textMessage, rss)
+		if err != nil {
+			r.logger.Error("error execute template", zap.Error(err))
+			r.bot.Send(errorMessage)
+			return
+		}
+		msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, textMessage.String())
+		var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Подписаться", chains.NewCallbackData("subscribe", SubscribeCallbackData{
+					RssId: rss.Id,
+				}).JSON()),
+			),
+		)
+		msg.ReplyMarkup = numericKeyboard
+		_, err = r.bot.Send(msg)
+		if err != nil {
+			r.logger.Error("error send message", zap.Error(err))
+		}
 	}
 }
 

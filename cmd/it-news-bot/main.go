@@ -61,6 +61,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	subscriptionRepo, err := db.NewSubscriptionRepo(sqlLiteDB)
+	if err != nil {
+		panic(err)
+	}
+	_ = subscriptionRepo
 
 	bot, err := tgbotapi.NewBotAPI(conf.TelegramBotApi.BotToken)
 	if err != nil {

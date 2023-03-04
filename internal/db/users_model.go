@@ -14,7 +14,8 @@ type UsersRepoI interface {
 
 type User struct {
 	gorm.Model
-	Id       int64 `gorm_db:"primaryKey"`
-	UserName string
-	LastTime time.Time
+	Id            int64 `gorm_db:"primaryKey"`
+	UserName      string
+	LastTime      time.Time
+	Subscriptions []Subscription
 }
