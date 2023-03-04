@@ -96,10 +96,16 @@ func main() {
 		chains.NewChain().
 			Register(testCommand.Start).Register(testCommand.End))
 
-	rssCommand := command.NewCommandRss(bot, rssRepo, templates, logger)
+	rssCommand := command.NewCommandRss(command.RssCommandParam{
+		SubscriptionRepo: subscriptionRepo,
+		Templates:        templates,
+		RssRepo:          rssRepo,
+		Bot:              bot,
+		Logger:           logger,
+	})
 	chainsPool.Command("rss",
 		chains.NewChain().
-			Register(rssCommand.List).RegisterCallback("Add", rssCommand.AddRssCallback))
+			Register(rssCommand.List).RegisterCallback("subscribe", rssCommand.SubscribeCallback))
 
 	chainsPool.Command("rss_add",
 		chains.NewChain().

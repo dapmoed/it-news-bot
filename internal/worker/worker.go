@@ -1,12 +1,9 @@
 package worker
 
 import (
-	"fmt"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/mitchellh/mapstructure"
 	"go.uber.org/zap"
 	"it-news-bot/internal/chains"
-	command2 "it-news-bot/internal/command"
 	"it-news-bot/internal/db"
 	"it-news-bot/internal/sessions"
 	"sync"
@@ -50,20 +47,12 @@ func (w *Worker) Handle(name int) {
 		select {
 		case update := <-w.Chanel:
 			if update.Message == nil {
-
-				command, in, err := chains.UnmarshalCallbackData(update.CallbackQuery.Data)
-				fmt.Println(command)
-				tt := &command2.SubscribeCallbackData{}
-				mapstructure.Decode(in, tt)
-				fmt.Println(tt.RssId)
-				fmt.Println(err)
-
-				callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
-				if _, err := w.Bot.Request(callback); err != nil {
-					SendError(w.Bot, update.CallbackQuery.Message.Chat.ID)
-					w.config.Logger.Error("error request Callback", zap.Error(err))
-					continue
-				}
+				//callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
+				//if _, err := w.Bot.Request(callback); err != nil {
+				//	SendError(w.Bot, update.CallbackQuery.Message.Chat.ID)
+				//	w.config.Logger.Error("error request Callback", zap.Error(err))
+				//	continue
+				//}
 
 				userSession, err := w.config.StorageSession.Get(update.CallbackQuery.From.ID)
 				if err != nil {
@@ -72,7 +61,7 @@ func (w *Worker) Handle(name int) {
 				}
 
 				userSession.Extend()
-				err = userSession.GetChain().CallBack(update)
+				err = userSession.GetChain().CallCallback(update)
 				if err != nil {
 					SendError(w.Bot, update.CallbackQuery.Message.Chat.ID)
 					w.config.Logger.Error("error call func callback", zap.Error(err))

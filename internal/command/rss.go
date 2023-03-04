@@ -20,18 +20,28 @@ type SubscribeCallbackData struct {
 }
 
 type RssCommand struct {
-	bot       *tgbotapi.BotAPI
-	rssRepo   db.RssRepoI
-	logger    *zap.Logger
-	templates *template.Templates
+	rssRepo          db.RssRepoI
+	subscriptionRepo db.SubscriptionRepoI
+	logger           *zap.Logger
+	templates        *template.Templates
+	bot              *tgbotapi.BotAPI
 }
 
-func NewCommandRss(bot *tgbotapi.BotAPI, rssRepo db.RssRepoI, templates *template.Templates, logger *zap.Logger) *RssCommand {
+type RssCommandParam struct {
+	RssRepo          db.RssRepoI
+	SubscriptionRepo db.SubscriptionRepoI
+	Logger           *zap.Logger
+	Templates        *template.Templates
+	Bot              *tgbotapi.BotAPI
+}
+
+func NewCommandRss(param RssCommandParam) *RssCommand {
 	return &RssCommand{
-		bot:       bot,
-		rssRepo:   rssRepo,
-		logger:    logger,
-		templates: templates,
+		bot:              param.Bot,
+		rssRepo:          param.RssRepo,
+		logger:           param.Logger,
+		templates:        param.Templates,
+		subscriptionRepo: param.SubscriptionRepo,
 	}
 }
 
@@ -79,9 +89,28 @@ func (r *RssCommand) List(ctx *chains.Context) {
 //	}
 //}
 
-func (r *RssCommand) AddRssCallback(ctx *chains.Context) {
-	msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Команда сработала")
+func (r *RssCommand) SubscribeCallback(ctx *chains.Context, data interface{}) {
+	s, err := chains.UnmarshalCallbackData(data, SubscribeCallbackData{})
+	if err != nil {
+		r.logger.Error("error UnmarshalCallbackData", zap.Error(err))
+		msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Извините. Произошла ошибка")
+		r.bot.Send(msg)
+		return
+	}
+
+	if data, ok := s.(*SubscribeCallbackData); ok {
+		err := r.subscriptionRepo.Add(ctx.Update.CallbackQuery.From.ID, data.RssId)
+		if err != nil {
+			r.logger.Error("error add subscription", zap.Error(err))
+			msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Извините. Произошла ошибка")
+			r.bot.Send(msg)
+			return
+		}
+	}
+
+	msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Вы успешно подписаны на ленту")
 	r.bot.Send(msg)
+	return
 }
 
 func (r *RssCommand) AddRssUriStepOne(ctx *chains.Context) {

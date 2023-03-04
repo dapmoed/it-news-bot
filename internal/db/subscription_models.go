@@ -5,6 +5,7 @@ import (
 )
 
 type SubscriptionRepoI interface {
+	Add(userId, rssId int64) error
 }
 
 type Subscription struct {

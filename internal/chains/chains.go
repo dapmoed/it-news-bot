@@ -13,7 +13,7 @@ var (
 
 type Chain struct {
 	steps           []Step
-	callbacks       map[string]Step
+	callbacks       map[string]StepCallback
 	current         int
 	context         *Context
 	ended           bool
@@ -23,7 +23,7 @@ type Chain struct {
 func NewChain() *Chain {
 	return &Chain{
 		durationSession: time.Second * 10,
-		callbacks:       make(map[string]Step),
+		callbacks:       make(map[string]StepCallback),
 	}
 }
 
@@ -54,13 +54,17 @@ func (c *Chain) Call(update tgbotapi.Update) {
 	c.steps[c.current].Call(ctx)
 }
 
-func (c *Chain) CallBack(update tgbotapi.Update) error {
+func (c *Chain) CallCallback(update tgbotapi.Update) error {
 	ctx := c.context
 	ctx.Update = update
 
 	if update.CallbackQuery != nil {
-		if c, ok := c.callbacks[update.CallbackQuery.Data]; ok {
-			c.Call(ctx)
+		command, data, err := UnmarshalCallbackCommand(update.CallbackQuery.Data)
+		if err != nil {
+			return err
+		}
+		if c, ok := c.callbacks[command]; ok {
+			c.Call(ctx, data)
 			return nil
 		}
 	}
@@ -68,8 +72,8 @@ func (c *Chain) CallBack(update tgbotapi.Update) error {
 	return ErrNotFoundCallback
 }
 
-func (c *Chain) RegisterCallback(data string, f func(ctx *Context)) *Chain {
-	c.callbacks[data] = Step{
+func (c *Chain) RegisterCallback(commandName string, f func(ctx *Context, data interface{})) *Chain {
+	c.callbacks[commandName] = StepCallback{
 		f: f,
 	}
 	return c
@@ -104,4 +108,12 @@ type Step struct {
 
 func (s Step) Call(ctx *Context) {
 	s.f(ctx)
+}
+
+type StepCallback struct {
+	f func(ctx *Context, data interface{})
+}
+
+func (c StepCallback) Call(ctx *Context, data interface{}) {
+	c.f(ctx, data)
 }

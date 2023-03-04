@@ -1,20 +1,24 @@
 package chains
 
-import jsoniter "github.com/json-iterator/go"
+import (
+	jsoniter "github.com/json-iterator/go"
+	"github.com/mitchellh/mapstructure"
+	"reflect"
+)
 
-type CallbackData struct {
-	Command string      `json:"command"`
-	Data    interface{} `json:"data"`
+type CallbackCommand struct {
+	Name string      `json:"command"`
+	Data interface{} `json:"data"`
 }
 
-func NewCallbackData(command string, data interface{}) CallbackData {
-	return CallbackData{
-		Command: command,
-		Data:    data,
+func NewCallbackData(command string, data interface{}) CallbackCommand {
+	return CallbackCommand{
+		Name: command,
+		Data: data,
 	}
 }
 
-func (c CallbackData) JSON() string {
+func (c CallbackCommand) JSON() string {
 	b, err := jsoniter.Marshal(&c)
 	if err != nil {
 		return "{}"
@@ -22,12 +26,23 @@ func (c CallbackData) JSON() string {
 	return string(b)
 }
 
-func UnmarshalCallbackData(s string) (string, interface{}, error) {
-	c := &CallbackData{}
-	err := jsoniter.Unmarshal([]byte(s), c)
+func UnmarshalCallbackCommand(s string) (string, interface{}, error) {
+	callbackCommand := &CallbackCommand{}
+	err := jsoniter.Unmarshal([]byte(s), callbackCommand)
 	if err != nil {
 		return "", nil, err
 	}
 
-	return c.Command, c.Data, nil
+	return callbackCommand.Name, callbackCommand.Data, nil
+}
+
+func UnmarshalCallbackData(s interface{}, dst interface{}) (interface{}, error) {
+	callbackDataDst := reflect.New(reflect.TypeOf(dst)).Interface()
+
+	err := mapstructure.Decode(s, callbackDataDst)
+	if err != nil {
+		return nil, err
+	}
+
+	return callbackDataDst, nil
 }
