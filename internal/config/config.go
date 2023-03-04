@@ -7,6 +7,7 @@ import (
 type Config struct {
 	TelegramBotApi telegramBotApi
 	DB             db
+	TPL            templates
 }
 
 type telegramBotApi struct {
@@ -14,7 +15,11 @@ type telegramBotApi struct {
 }
 
 type db struct {
-	PathDB string `env:"SQLITE_FILE_PATH" envDefault:"./data/bot.db"`
+	Path string `env:"SQLITE_FILE_PATH" envDefault:"./data/bot.db"`
+}
+
+type templates struct {
+	Path string `env:"TEMPLATE_PATH" envDefault:"./template"`
 }
 
 func GetConfig() (Config, error) {

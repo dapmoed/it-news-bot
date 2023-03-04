@@ -1,6 +1,9 @@
 package db
 
-import "gorm.io/gorm"
+import (
+	"database/sql"
+	"gorm.io/gorm"
+)
 
 type RssRepository struct {
 	db *gorm.DB
@@ -25,4 +28,19 @@ func (r *RssRepository) List() ([]Rss, error) {
 		return rssItems, result.Error
 	}
 	return rssItems, nil
+}
+
+func (r *RssRepository) Add(url, name string) error {
+	rss := &Rss{
+		Url:  url,
+		Name: name,
+	}
+	tx := r.db.Create(&rss)
+	if tx.Error != nil {
+		return tx.Error
+	}
+	if tx.RowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }

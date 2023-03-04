@@ -2,6 +2,7 @@ package worker
 
 import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"go.uber.org/zap"
 	"it-news-bot/internal/chains"
 	"it-news-bot/internal/db"
 	"it-news-bot/internal/sessions"
@@ -20,6 +21,7 @@ type Config struct {
 	UsersRepo      db.UsersRepoI
 	ChainsPool     *chains.Pool
 	StorageSession *sessions.StorageSession
+	Logger         *zap.Logger
 }
 
 func New(botApi *tgbotapi.BotAPI, chanel tgbotapi.UpdatesChannel, config Config, count int) *Worker {
@@ -47,26 +49,38 @@ func (w *Worker) Handle(name int) {
 			if update.Message == nil {
 				callback := tgbotapi.NewCallback(update.CallbackQuery.ID, update.CallbackQuery.Data)
 				if _, err := w.Bot.Request(callback); err != nil {
-					panic(err)
+					SendError(w.Bot, update.CallbackQuery.Message.Chat.ID)
+					w.config.Logger.Error("error request Callback", zap.Error(err))
+					continue
 				}
 
-				// And finally, send a message containing the data received.
-				msg := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, update.CallbackQuery.Data)
-				if _, err := w.Bot.Send(msg); err != nil {
-					panic(err)
+				userSession, err := w.config.StorageSession.Get(update.CallbackQuery.From.ID)
+				if err != nil {
+					w.config.Logger.Error("error get user session", zap.Error(err))
+					continue
+				}
+
+				userSession.Extend()
+				err = userSession.GetChain().CallBack(update)
+				if err != nil {
+					SendError(w.Bot, update.CallbackQuery.Message.Chat.ID)
+					w.config.Logger.Error("error call func callback", zap.Error(err))
+					continue
 				}
 				continue
 			}
+
 			userId := update.Message.From.ID
 
 			if update.Message.IsCommand() {
 				chain, err := w.config.ChainsPool.GetChain(update.Message.Command())
 				if err != nil {
 					if err == chains.ErrNotFound {
-						Unknown(w.Bot, update)
+						SendUnknown(w.Bot, update.Message.Chat.ID)
+						w.config.Logger.Error("not found chain", zap.Error(err))
 						continue
 					}
-					// TODO log errors
+					w.config.Logger.Error("error get chain", zap.Error(err))
 					continue
 				}
 				w.config.StorageSession.Add(userId, chain)
@@ -75,10 +89,10 @@ func (w *Worker) Handle(name int) {
 			userSession, err := w.config.StorageSession.Get(userId)
 			if err != nil {
 				if err == sessions.ErrNotFound {
-					// TODO log error
+					w.config.Logger.Error("not found user session", zap.Error(err))
 					continue
 				}
-				// TODO log error
+				w.config.Logger.Error("error get user session", zap.Error(err))
 				continue
 			}
 			userSession.Extend()
@@ -90,7 +104,12 @@ func (w *Worker) Wait() {
 	w.wgGroup.Wait()
 }
 
-func Unknown(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Я не знаю такой команды")
+func SendUnknown(bot *tgbotapi.BotAPI, chatId int64) {
+	msg := tgbotapi.NewMessage(chatId, "Я не знаю такой команды")
+	bot.Send(msg)
+}
+
+func SendError(bot *tgbotapi.BotAPI, chatId int64) {
+	msg := tgbotapi.NewMessage(chatId, "Произошла внутренняя ошибка")
 	bot.Send(msg)
 }

@@ -14,7 +14,7 @@ WORKDIR /root/
 RUN mkdir data
 RUN mkdir template
 COPY --from=builder ./app/app .
-COPY --from=builder ./app/internal/template ./template
+COPY --from=builder ./app/template ./template
 EXPOSE 8080
 
 CMD ["./app"]

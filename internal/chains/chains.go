@@ -7,11 +7,13 @@ import (
 )
 
 var (
-	ErrEndOfScript = errors.New("end of script")
+	ErrEndOfScript      = errors.New("end of script")
+	ErrNotFoundCallback = errors.New("not found callback")
 )
 
 type Chain struct {
 	steps           []Step
+	callbacks       map[string]Step
 	current         int
 	context         *Context
 	ended           bool
@@ -21,12 +23,14 @@ type Chain struct {
 func NewChain() *Chain {
 	return &Chain{
 		durationSession: time.Second * 10,
+		callbacks:       make(map[string]Step),
 	}
 }
 
 func (c *Chain) Clone() *Chain {
 	chain := &Chain{
 		steps:           c.steps,
+		callbacks:       c.callbacks,
 		durationSession: c.DurationSession(),
 	}
 	chain.context = &Context{
@@ -48,6 +52,27 @@ func (c *Chain) Call(update tgbotapi.Update) {
 	ctx := c.context
 	ctx.Update = update
 	c.steps[c.current].Call(ctx)
+}
+
+func (c *Chain) CallBack(update tgbotapi.Update) error {
+	ctx := c.context
+	ctx.Update = update
+
+	if update.CallbackQuery != nil {
+		if c, ok := c.callbacks[update.CallbackQuery.Data]; ok {
+			c.Call(ctx)
+			return nil
+		}
+	}
+
+	return ErrNotFoundCallback
+}
+
+func (c *Chain) RegisterCallback(data string, f func(ctx *Context)) *Chain {
+	c.callbacks[data] = Step{
+		f: f,
+	}
+	return c
 }
 
 func (c *Chain) Register(f func(ctx *Context)) *Chain {

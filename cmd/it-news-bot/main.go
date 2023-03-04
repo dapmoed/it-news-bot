@@ -10,6 +10,7 @@ import (
 	"it-news-bot/internal/config"
 	"it-news-bot/internal/db"
 	"it-news-bot/internal/sessions"
+	"it-news-bot/internal/template"
 	"it-news-bot/internal/worker"
 	"log"
 	"time"
@@ -30,10 +31,15 @@ func init() {
 func main() {
 	fmt.Println(conf)
 
+	templates, err := template.New(conf.TPL.Path)
+	if err != nil {
+		panic(err)
+	}
+
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	sqlLiteDB, err := db.NewDB(conf.DB.PathDB)
+	sqlLiteDB, err := db.NewDB(conf.DB.Path)
 	if err != nil {
 		panic(err)
 	}
@@ -85,15 +91,20 @@ func main() {
 		chains.NewChain().
 			Register(testCommand.Start).Register(testCommand.End))
 
-	rssCommand := command.NewCommandRss(bot, rssRepo, logger)
+	rssCommand := command.NewCommandRss(bot, rssRepo, templates, logger)
 	chainsPool.Command("rss",
 		chains.NewChain().
-			Register(rssCommand.List).Register(rssCommand.Add))
+			Register(rssCommand.List).RegisterCallback("Add", rssCommand.AddRssCallback))
+
+	chainsPool.Command("rss_add",
+		chains.NewChain().
+			Register(rssCommand.AddRssUriStepOne).Register(rssCommand.AddRssUriStepTwo))
 
 	workers := worker.New(bot, updates, worker.Config{
 		UsersRepo:      usersRepo,
 		ChainsPool:     chainsPool,
 		StorageSession: sessions.New(),
+		Logger:         logger,
 	}, 10)
 	workers.Init()
 	workers.Wait()
