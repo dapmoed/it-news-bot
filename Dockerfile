@@ -12,11 +12,9 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-linkmode external -extldflag
 FROM alpine:latest
 WORKDIR /root/
 RUN mkdir data
-WORKDIR /root/data
 RUN mkdir template
-WORKDIR /root/
 COPY --from=builder ./app/app .
-COPY --from=builder ./app/internal/template ./data/template
+COPY --from=builder ./app/internal/template ./template
 EXPOSE 8080
 
 CMD ["./app"]
