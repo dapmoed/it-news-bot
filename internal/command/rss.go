@@ -52,12 +52,12 @@ func (r *RssCommand) List(ctx *chains.Context) {
 
 	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, textMessage.String())
 
-	var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("Add", "Add"),
-		),
-	)
-	msg.ReplyMarkup = numericKeyboard
+	//var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+	//	tgbotapi.NewInlineKeyboardRow(
+	//		tgbotapi.NewInlineKeyboardButtonData("Add", "Add"),
+	//	),
+	//)
+	//msg.ReplyMarkup = numericKeyboard
 	_, err = r.bot.Send(msg)
 	if err != nil {
 		r.logger.Error("error send message", zap.Error(err))
