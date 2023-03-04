@@ -6,7 +6,6 @@ services:
     restart: always
     volumes:
       - /opt/it-news-bot/data:/root/data
-      - /opt/it-news-bot/template:/root/template
     env_file:
       - .env
     networks:
