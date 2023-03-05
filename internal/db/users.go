@@ -22,22 +22,23 @@ func NewUserRepo(db *gorm.DB) (*UsersRepository, error) {
 	}, nil
 }
 
-func (r *UsersRepository) GetUser(id int64) (*User, error) {
+func (r *UsersRepository) GetUser(tgUserID int64) (*User, error) {
 	var user User
-	result := r.db.Find(&user, id)
+	result := r.db.Model(User{TgID: tgUserID}).First(&user)
 	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, sql.ErrNoRows
+		}
 		return nil, result.Error
-	}
-	if result.RowsAffected == 0 {
-		return nil, sql.ErrNoRows
 	}
 	return &user, nil
 }
 
-func (r *UsersRepository) AddUser(id int64, userName string) error {
+func (r *UsersRepository) AddUser(tgUserID int64, tgChatID int64, userName string) error {
 	user := &User{
-		Id:       id,
-		UserName: userName,
+		TgID:     tgUserID,
+		TgChatID: tgChatID,
+		Name:     userName,
 		LastTime: time.Now(),
 	}
 	r.db.Create(&user)
@@ -57,9 +58,9 @@ func (r *UsersRepository) UpdateLastTime(user *User) error {
 
 func (r *UsersRepository) List() ([]User, error) {
 	users := make([]User, 0)
-	tx := r.db.Find(&users)
-	if tx.Error != nil {
-		return users, tx.Error
+	err := r.db.Model(&User{}).Preload("Subscriptions").Find(&users).Error
+	if err != nil {
+		return users, err
 	}
 	return users, nil
 }

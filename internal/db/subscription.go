@@ -20,10 +20,10 @@ func NewSubscriptionRepo(db *gorm.DB) (*SubscriptionRepository, error) {
 	}, nil
 }
 
-func (s *SubscriptionRepository) Add(userId, rssId int64) error {
+func (s *SubscriptionRepository) Add(userId, rssId uint) error {
 	tx := s.db.Create(&Subscription{
-		RssId:  rssId,
-		UserId: userId,
+		RssID:  rssId,
+		UserID: userId,
 	})
 	if tx.Error != nil {
 		return tx.Error

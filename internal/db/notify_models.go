@@ -6,11 +6,13 @@ import (
 )
 
 type NotifyRepoI interface {
+	Add(userID uint) error
+	Get(userID uint) (*Notify, error)
+	Update(userID uint) error
 }
 
 type Notify struct {
 	gorm.Model
-	Id       int64 `gorm_db:"primaryKey"`
-	UserId   int64
+	UserID   uint
 	LastTime time.Time
 }

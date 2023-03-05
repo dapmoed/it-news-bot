@@ -5,12 +5,11 @@ import (
 )
 
 type SubscriptionRepoI interface {
-	Add(userId, rssId int64) error
+	Add(userID, rssID uint) error
 }
 
 type Subscription struct {
 	gorm.Model
-	Id     int64 `gorm_db:"primaryKey"`
-	RssId  int64
-	UserId int64
+	RssID  uint
+	UserID uint
 }

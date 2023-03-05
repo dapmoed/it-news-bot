@@ -29,7 +29,7 @@ func (c *StartCommand) Start(ctx *chains.Context) {
 			if ctx.Update.Message.From.UserName != "" {
 				username = fmt.Sprintf("%s( @%s )", username, ctx.Update.Message.From.UserName)
 			}
-			err := c.usersRepo.AddUser(ctx.Update.Message.From.ID, username)
+			err := c.usersRepo.AddUser(ctx.Update.Message.From.ID, ctx.Update.Message.Chat.ID, username)
 			if err != nil {
 				// TODO log
 				return
@@ -44,7 +44,7 @@ func (c *StartCommand) Start(ctx *chains.Context) {
 		return
 	}
 
-	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.UserName, time.Now().Sub(user.LastTime).String()))
+	msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, fmt.Sprintf("Привет, %s. Последний раз мы виделись с тобой %s назад", user.Name, time.Now().Sub(user.LastTime).String()))
 	c.bot.Send(msg)
 
 	err = c.usersRepo.UpdateLastTime(user)

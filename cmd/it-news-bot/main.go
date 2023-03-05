@@ -103,6 +103,7 @@ func main() {
 
 	rssCommand := command.NewCommandRss(command.RssCommandParam{
 		SubscriptionRepo: subscriptionRepo,
+		UserRepo:         usersRepo,
 		Templates:        templates,
 		RssRepo:          rssRepo,
 		Bot:              bot,
@@ -129,6 +130,8 @@ func main() {
 		Logger:           logger,
 		Bot:              bot,
 		UserRepo:         usersRepo,
+		RssRepo:          rssRepo,
+		NotifyRepo:       notifyRepo,
 	})
 
 	go notifier.Run()

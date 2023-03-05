@@ -44,3 +44,15 @@ func (r *RssRepository) Add(url, name string) error {
 	}
 	return nil
 }
+
+func (r *RssRepository) Get(id uint) (*Rss, error) {
+	var rss Rss
+	tx := r.db.First(&rss, id)
+	if tx.Error != nil {
+		if tx.Error == gorm.ErrRecordNotFound {
+			return nil, sql.ErrNoRows
+		}
+		return nil, tx.Error
+	}
+	return &rss, nil
+}

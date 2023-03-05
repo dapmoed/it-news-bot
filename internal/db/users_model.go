@@ -7,7 +7,7 @@ import (
 
 type UsersRepoI interface {
 	GetUser(id int64) (*User, error)
-	AddUser(id int64, userName string) error
+	AddUser(tgUserID int64, tgChatID int64, userName string) error
 	UpdateUser(user *User) error
 	UpdateLastTime(user *User) error
 	List() ([]User, error)
@@ -15,8 +15,9 @@ type UsersRepoI interface {
 
 type User struct {
 	gorm.Model
-	Id            int64 `gorm_db:"primaryKey"`
-	UserName      string
+	TgID          int64
+	TgChatID      int64
+	Name          string
 	LastTime      time.Time
 	Subscriptions []Subscription
 }
