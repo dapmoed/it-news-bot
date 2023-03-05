@@ -111,7 +111,9 @@ func main() {
 	})
 	chainsPool.Command("rss",
 		chains.NewChain().
-			Register(rssCommand.List).RegisterCallback("subscribe", rssCommand.SubscribeCallback))
+			Register(rssCommand.List).
+			RegisterCallback("subscribe", rssCommand.SubscribeCallback).
+			RegisterCallback("unsubscribe", rssCommand.UnSubscribeCallback))
 
 	chainsPool.Command("rss_add",
 		chains.NewChain().

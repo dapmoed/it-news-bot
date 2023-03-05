@@ -2,7 +2,6 @@ package command
 
 import (
 	"bytes"
-	"database/sql"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mmcdole/gofeed"
 	"go.uber.org/zap"
@@ -14,6 +13,7 @@ import (
 
 const (
 	defaultTextError = "Извините у нас проблемы"
+	textNotFound     = "Пользователь не найден"
 )
 
 type SubscribeCallbackData struct {
@@ -51,6 +51,19 @@ func NewCommandRss(param RssCommandParam) *RssCommand {
 
 func (r *RssCommand) List(ctx *chains.Context) {
 	errorMessage := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, defaultTextError)
+	errorNotFound := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, textNotFound)
+
+	user, err := r.userRepo.GetUser(ctx.Update.Message.From.ID)
+	if err != nil {
+		r.logger.Error("error get user", zap.Error(err))
+		r.bot.Send(errorMessage)
+		return
+	}
+
+	if user == nil {
+		r.bot.Send(errorNotFound)
+		return
+	}
 
 	rssList, err := r.rssRepo.List()
 	if err != nil {
@@ -68,14 +81,29 @@ func (r *RssCommand) List(ctx *chains.Context) {
 			return
 		}
 		msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, textMessage.String())
-		var numericKeyboard = tgbotapi.NewInlineKeyboardMarkup(
+
+		var numericKeyboardSubscribe = tgbotapi.NewInlineKeyboardMarkup(
 			tgbotapi.NewInlineKeyboardRow(
 				tgbotapi.NewInlineKeyboardButtonData("Подписаться", chains.NewCallbackData("subscribe", SubscribeCallbackData{
 					RssId: rss.ID,
 				}).JSON()),
 			),
 		)
-		msg.ReplyMarkup = numericKeyboard
+		var numericKeyboardUnSubscribe = tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Отписаться", chains.NewCallbackData("unsubscribe", SubscribeCallbackData{
+					RssId: rss.ID,
+				}).JSON()),
+			),
+		)
+
+		isSubscribe, err := r.subscriptionRepo.IsSubscribe(rss.ID, user.ID)
+		if isSubscribe {
+			msg.ReplyMarkup = numericKeyboardUnSubscribe
+		} else {
+			msg.ReplyMarkup = numericKeyboardSubscribe
+		}
+
 		_, err = r.bot.Send(msg)
 		if err != nil {
 			r.logger.Error("error send message", zap.Error(err))
@@ -105,13 +133,14 @@ func (r *RssCommand) SubscribeCallback(ctx *chains.Context, data interface{}) {
 	if data, ok := s.(*SubscribeCallbackData); ok {
 		user, err := r.userRepo.GetUser(ctx.Update.CallbackQuery.From.ID)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Пользователь не найден")
-				r.bot.Send(msg)
-				return
-			}
 			r.logger.Error("error get user", zap.Error(err))
 			msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Извините. Произошла ошибка")
+			r.bot.Send(msg)
+			return
+		}
+
+		if user == nil {
+			msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Пользователь не найден")
 			r.bot.Send(msg)
 			return
 		}
@@ -126,6 +155,44 @@ func (r *RssCommand) SubscribeCallback(ctx *chains.Context, data interface{}) {
 	}
 
 	msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Вы успешно подписаны на ленту")
+	r.bot.Send(msg)
+	return
+}
+
+func (r *RssCommand) UnSubscribeCallback(ctx *chains.Context, data interface{}) {
+	s, err := chains.UnmarshalCallbackData(data, SubscribeCallbackData{})
+	if err != nil {
+		r.logger.Error("error UnmarshalCallbackData", zap.Error(err))
+		msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Извините. Произошла ошибка")
+		r.bot.Send(msg)
+		return
+	}
+
+	if data, ok := s.(*SubscribeCallbackData); ok {
+		user, err := r.userRepo.GetUser(ctx.Update.CallbackQuery.From.ID)
+		if err != nil {
+			r.logger.Error("error get user", zap.Error(err))
+			msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Извините. Произошла ошибка")
+			r.bot.Send(msg)
+			return
+		}
+
+		if user == nil {
+			msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Пользователь не найден")
+			r.bot.Send(msg)
+			return
+		}
+
+		err = r.subscriptionRepo.Remove(user.ID, data.RssId)
+		if err != nil {
+			r.logger.Error("error add subscription", zap.Error(err))
+			msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Извините. Произошла ошибка")
+			r.bot.Send(msg)
+			return
+		}
+	}
+
+	msg := tgbotapi.NewMessage(ctx.Update.CallbackQuery.Message.Chat.ID, "Вы успешно отписаны от ленты")
 	r.bot.Send(msg)
 	return
 }
@@ -152,7 +219,7 @@ func (r *RssCommand) AddRssUriStepTwo(ctx *chains.Context) {
 		return
 	}
 
-	err = r.rssRepo.Add(u.String(), feed.Title)
+	err = r.rssRepo.Add(u.String(), feed.Title, feed.Description)
 	if err != nil {
 		msg := tgbotapi.NewMessage(ctx.Update.Message.Chat.ID, "Проблема с добавлением URL")
 		r.bot.Send(msg)

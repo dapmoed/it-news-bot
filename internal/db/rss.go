@@ -30,10 +30,11 @@ func (r *RssRepository) List() ([]Rss, error) {
 	return rssItems, nil
 }
 
-func (r *RssRepository) Add(url, name string) error {
+func (r *RssRepository) Add(url, name, description string) error {
 	rss := &Rss{
-		Url:  url,
-		Name: name,
+		Url:         url,
+		Name:        name,
+		Description: description,
 	}
 	tx := r.db.Create(&rss)
 	if tx.Error != nil {

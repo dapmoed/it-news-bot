@@ -1,7 +1,6 @@
 package notify
 
 import (
-	"database/sql"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mmcdole/gofeed"
 	"go.uber.org/zap"
@@ -39,7 +38,7 @@ func New(param Param) *Notifier {
 }
 
 func (n *Notifier) Run() {
-	ticker := time.NewTicker(15 * time.Minute)
+	ticker := time.NewTicker(1 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -65,31 +64,22 @@ func (n *Notifier) Notify(user *db.User, rssId uint) {
 		return
 	}
 
-	notify, err := n.notifyRepo.Get(user.ID)
-	if err != nil {
-		if err != sql.ErrNoRows {
-			n.logger.Error("error get notify user", zap.Error(err))
-			return
-		}
-	}
-
-	if notify == nil {
-		n.notifyRepo.Update(user.ID)
-		return
-	}
-
 	fp := gofeed.NewParser()
 	feed, _ := fp.ParseURL(rss.Url)
 	for _, v := range feed.Items {
+		notify, err := n.notifyRepo.Get(user.ID, v.Link)
+		if err != nil {
+			n.logger.Error("error get notify", zap.Error(err))
+			continue
+		}
 
-		if v.PublishedParsed.After(notify.LastTime) {
+		if notify == nil {
 			msg := tgbotapi.NewMessage(user.TgChatID, v.Link)
 			_, err := n.bot.Send(msg)
 			if err != nil {
 				n.logger.Error("error send message", zap.Error(err))
 			}
+			n.notifyRepo.Add(user.ID, v.Link)
 		}
 	}
-
-	n.notifyRepo.Update(user.ID)
 }

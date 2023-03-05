@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"gorm.io/gorm"
 	"time"
 )
@@ -24,12 +23,15 @@ func NewUserRepo(db *gorm.DB) (*UsersRepository, error) {
 
 func (r *UsersRepository) GetUser(tgUserID int64) (*User, error) {
 	var user User
-	result := r.db.Model(User{TgID: tgUserID}).First(&user)
+	result := r.db.Where(User{TgID: tgUserID}).First(&user)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
+			return nil, nil
 		}
 		return nil, result.Error
+	}
+	if result.RowsAffected == 0 {
+		return nil, nil
 	}
 	return &user, nil
 }

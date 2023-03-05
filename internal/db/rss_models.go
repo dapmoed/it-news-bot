@@ -4,7 +4,7 @@ import "gorm.io/gorm"
 
 type RssRepoI interface {
 	List() ([]Rss, error)
-	Add(url, name string) error
+	Add(url, name, description string) error
 	Get(id uint) (*Rss, error)
 }
 

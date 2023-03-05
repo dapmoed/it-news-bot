@@ -1,9 +1,9 @@
 package db
 
 import (
-	"database/sql"
+	"crypto/md5"
+	"encoding/hex"
 	"gorm.io/gorm"
-	"time"
 )
 
 type NotifyRepository struct {
@@ -22,38 +22,44 @@ func NewNotifyRepo(db *gorm.DB) (*NotifyRepository, error) {
 	}, nil
 }
 
-func (n *NotifyRepository) Add(userID uint) error {
+func (n *NotifyRepository) Add(userID uint, url string) error {
 	notify := &Notify{
-		LastTime: time.Now(),
-		UserID:   userID,
+		URLHash: GetMd5(url),
+		UserID:  userID,
 	}
 	n.db.Create(notify)
 	return nil
 }
 
-func (n *NotifyRepository) Get(userID uint) (*Notify, error) {
+func (n *NotifyRepository) Get(userID uint, url string) (*Notify, error) {
 	var notify Notify
-	result := n.db.First(&notify, userID)
-	if result.Error != nil {
-		if result.Error == gorm.ErrRecordNotFound {
-			return nil, sql.ErrNoRows
-		}
-		return nil, result.Error
+	tx := n.db.Where(&Notify{URLHash: GetMd5(url), UserID: userID}).Find(&notify)
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	if tx.RowsAffected == 0 {
+		return nil, nil
 	}
 	return &notify, nil
 }
 
-func (n *NotifyRepository) Update(userID uint) error {
-	notify, err := n.Get(userID)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			n.Add(userID)
-			return nil
-		}
-		return err
-	}
+//func (n *NotifyRepository) Update(userID uint) error {
+//	notify, err := n.Get(userID)
+//	if err != nil {
+//		if err == sql.ErrNoRows {
+//			n.Add(userID)
+//			return nil
+//		}
+//		return err
+//	}
+//
+//	notify.LastTime = time.Now()
+//	n.db.Save(notify)
+//	return nil
+//}
 
-	notify.LastTime = time.Now()
-	n.db.Save(notify)
-	return nil
+func GetMd5(text string) string {
+	h := md5.New()
+	h.Write([]byte(text))
+	return hex.EncodeToString(h.Sum(nil))
 }
