@@ -38,7 +38,7 @@ func New(param Param) *Notifier {
 }
 
 func (n *Notifier) Run() {
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(15 * time.Minute)
 	for {
 		select {
 		case <-ticker.C:
