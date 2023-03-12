@@ -96,7 +96,11 @@ func (w *Worker) Handle(name int) {
 				continue
 			}
 			userSession.Extend()
-			userSession.GetChain().Call(update)
+			err = userSession.GetChain().Call(update)
+			if err != nil {
+				w.config.Logger.Error("error call step chain", zap.Error(err))
+				continue
+			}
 		}
 	}
 }

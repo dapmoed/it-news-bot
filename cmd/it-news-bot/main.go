@@ -46,8 +46,8 @@ func main() {
 	}
 
 	defer func() {
-		if db, err := sqlLiteDB.DB(); err == nil {
-			err := db.Close()
+		if dbConnection, err := sqlLiteDB.DB(); err == nil {
+			err := dbConnection.Close()
 			if err != nil {
 				// TODO LOG
 			}
@@ -89,17 +89,17 @@ func main() {
 	startCommand := command.NewCommandStart(bot, usersRepo)
 	chainsPool.Command("start",
 		chains.NewChain().
-			Register(startCommand.Start).SetDurationSession(time.Second),
+			RegisterStep(startCommand.Start).SetDurationSession(time.Second),
 	)
 	newsCommand := command.NewCommandNews(bot, usersRepo)
 	chainsPool.Command("news",
 		chains.NewChain().
-			Register(newsCommand.Start))
+			RegisterStep(newsCommand.Start))
 
 	testCommand := command.NewCommandTest(bot, usersRepo)
 	chainsPool.Command("test",
 		chains.NewChain().
-			Register(testCommand.Start).Register(testCommand.End))
+			RegisterStep(testCommand.Start).RegisterStep(testCommand.End))
 
 	rssCommand := command.NewCommandRss(command.RssCommandParam{
 		SubscriptionRepo: subscriptionRepo,
@@ -111,13 +111,13 @@ func main() {
 	})
 	chainsPool.Command("rss",
 		chains.NewChain().
-			Register(rssCommand.List).
+			RegisterStep(rssCommand.List).
 			RegisterCallback("subscribe", rssCommand.SubscribeCallback).
 			RegisterCallback("unsubscribe", rssCommand.UnSubscribeCallback))
 
 	chainsPool.Command("rss_add",
 		chains.NewChain().
-			Register(rssCommand.AddRssUriStepOne).Register(rssCommand.AddRssUriStepTwo))
+			RegisterStep(rssCommand.AddRssUriStepOne).RegisterStep(rssCommand.AddRssUriStepTwo))
 
 	workers := worker.New(bot, updates, worker.Config{
 		UsersRepo:      usersRepo,
