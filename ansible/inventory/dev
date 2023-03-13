@@ -1,2 +1,2 @@
 [dev_servers]
-app-dev ansible_ssh_host=188.225.18.189 ansible_user=root
+app-dev ansible_ssh_host=188.225.39.59 ansible_user=root
