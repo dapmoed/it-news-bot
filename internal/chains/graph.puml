@@ -1,0 +1,67 @@
+@startuml
+package Chains{
+annotation Chains {
+-const defaultDurationSession: 
+-var ErrEndOfScript: 
+-var ErrNotFoundCallback: 
+-var ErrNotFoundStep: 
+-var ErrNotFound: 
++NewCallbackData(command string, data interface): CallbackCommand
++UnmarshalCallbackCommand(s string): string, interface, error
++UnmarshalCallbackData(s interface, dst interface): interface, error
++NewChain(): *Chain
++NewPool(): *Pool
+}
+class CallbackCommand {
++Name: string
++Data: interface
++JSON(): string
+}
+class Chain {
+-ended: bool
+-current: int
+-durationSession: Duration
+-context: *Context
+-steps: []Step
+-callbacks: map[string]StepCallback
++Clone(): *Chain
++DurationSession(): Duration
++SetDurationSession(duration Duration): *Chain
++Call(update Update): error
++CallCallback(update Update): error
++RegisterCallback(command string, f func(ctx *Context, data interface) ): *Chain
++RegisterStep(f func(ctx *Context) ): *Chain
++Next(): error
++End()
++IsEnded(): bool
+}
+class Step {
+-f: func(ctx *Context) 
++Call(ctx *Context)
+}
+class StepCallback {
+-f: func(ctx *Context, data interface) 
++Call(ctx *Context, data interface)
+}
+class Context {
++Update: Update
++Chain: *Chain
+-values: []KeyValue
++Set(key string, value interface)
++Get(key string): int, interface
+}
+class KeyValue {
++Key: string
++Value: interface
+
+}
+class Pool {
+-chains: map[string]*Chain
++Command(c string, chain *Chain): *Pool
++GetChain(command string): *Chain, error
+}
+}
+"Chain" --> "Context"
+"Context" --> "Chain"
+
+@enduml
