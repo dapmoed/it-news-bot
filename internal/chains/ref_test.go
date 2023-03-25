@@ -1,0 +1,5 @@
+package chains
+
+func Example() {
+
+}

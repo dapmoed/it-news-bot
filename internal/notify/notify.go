@@ -4,6 +4,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/mmcdole/gofeed"
 	"go.uber.org/zap"
+	"it-news-bot/internal/chains"
 	"it-news-bot/internal/db"
 	"time"
 )
@@ -26,6 +27,11 @@ type Param struct {
 	Logger           *zap.Logger
 }
 
+type LikeCallbackData struct {
+	Link   string `json:"link"`
+	UserID uint   `json:"userId"`
+}
+
 func New(param Param) *Notifier {
 	return &Notifier{
 		userRepo:         param.UserRepo,
@@ -38,7 +44,7 @@ func New(param Param) *Notifier {
 }
 
 func (n *Notifier) Run() {
-	ticker := time.NewTicker(15 * time.Minute)
+	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
@@ -74,7 +80,16 @@ func (n *Notifier) Notify(user *db.User, rssId uint) {
 		}
 
 		if notify == nil {
+			var numericKeyboardLike = tgbotapi.NewInlineKeyboardMarkup(
+				tgbotapi.NewInlineKeyboardRow(
+					tgbotapi.NewInlineKeyboardButtonData("Нравится", chains.NewCallbackData("Like", LikeCallbackData{
+						Link: "",
+					}).JSON()),
+				),
+			)
+
 			msg := tgbotapi.NewMessage(user.TgChatID, v.Link)
+			msg.ReplyMarkup = numericKeyboardLike
 			_, err := n.bot.Send(msg)
 			if err != nil {
 				n.logger.Error("error send message", zap.Error(err))
