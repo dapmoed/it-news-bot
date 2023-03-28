@@ -1,5 +1,0 @@
-package chains
-
-func Example() {
-
-}
